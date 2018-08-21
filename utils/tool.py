@@ -1,4 +1,7 @@
-from utils.trading_calendar import *
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import logging
+from dataProvider.trading_calendar import *
 import pandas as pd
 
 
@@ -41,3 +44,21 @@ def standardize_series(se):
     se_std = se.std()
     se_mean = se.mean()
     return (se - se_mean) / se_std
+
+
+def get_logger(log_path='app.log', log_level=logging.DEBUG):
+    log_format = '[%(levelname)-7s][%(asctime)s][%(filename)s][line:%(lineno)s]: %(message)s'
+    date_format = '%Y-%m-%d %H:%M:%S'
+    result = logging.getLogger()
+    result.handlers = []
+    logging.basicConfig(level=log_level,
+                        format=log_format,
+                        datefmt=date_format,
+                        filename=log_path,
+                        filemode='a')
+    console = logging.StreamHandler()
+    console.setLevel(log_level)
+    formatter = logging.Formatter(log_format, date_format)
+    console.setFormatter(formatter)
+    result.addHandler(console)
+    return result

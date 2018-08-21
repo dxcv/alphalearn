@@ -1,10 +1,12 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 # import pandas as pd
 # import numpy as np
 # import scipy as sp
 import tushare as ts
+import vnpy as vp
 # import datetime
 # from utils.tool import auto_sample
-# from utils.trading_calendar import *
 # from alphalens import *
 from numpy import nan
 from pandas import (DataFrame, date_range)

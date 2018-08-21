@@ -7,7 +7,7 @@
 # @Software: PyCharm
 import datetime
 import tushare as ts
-
+from dataProvider.dataapi import da
 
 __ALL__ = [
     'is_trading_day',
@@ -26,9 +26,7 @@ def init_calendar():
     obj = init_calendar
     cache_name = 'trading_days'
     if not hasattr(obj, cache_name):
-        ts.set_token('0503684c1ca87a31116049960065adbf985e0c052adb268a2b5397dd')
-        pro = ts.pro_api()
-        trading_days = pro.trade_cal(exchange_id='SSE', start_date='20070101', end_date='', is_open='1')['cal_date'].tolist()
+        trading_days = da.trading_day()
         setattr(obj, cache_name, trading_days)
     return getattr(obj, cache_name)
 
@@ -235,7 +233,7 @@ def get_lately_month_trading_day(date=None):
     else:
         raise ValueError(
             'date error or out of range. date: %s. range: %s~%s' % (
-            date, trading_month_days[0], trading_month_days[-1]))
+                date, trading_month_days[0], trading_month_days[-1]))
 
 
 def get_trading_month_day_range(begin_date=None, end_date=None):
@@ -253,3 +251,4 @@ def get_trading_month_day_range(begin_date=None, end_date=None):
     b = trading_month_days.index(begin_date)
     e = trading_month_days.index(end_date)
     return trading_month_days[b:e + 1]
+

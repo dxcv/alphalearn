@@ -1,9 +1,10 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 import pandas as pd
 import numpy as np
 import scipy as sp
-import datetime
 from utils.tool import auto_sample
-from utils.trading_calendar import *
+from dataProvider.trading_calendar import *
 
 
 def continue_win(pct_series):
