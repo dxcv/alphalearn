@@ -99,11 +99,11 @@ class DataApi(object):
             if data['trade_date'].max() < end_date:
                 new_data = self._stock_bar(data['trade_date'].max(), lastTradingDay, field)
                 data = data.append(new_data, ignore_index=True)
+                data = data.drop_duplicates(['code', 'trade_date'])
                 data.to_hdf(self.stock_store, field, complevel=9)
         except Exception as e:
             data = self._stock_bar(MIN_BEGIN_DAY, lastTradingDay, field)
             data.to_hdf(self.stock_store, field, complevel=9)
-        data = data.drop_duplicates(['code', 'trade_date'])
         res = data.loc[(data['trade_date'] >= start_date) & (data['trade_date'] <= end_date)]
         if code is None:
             return res
@@ -139,11 +139,8 @@ class DataApi(object):
 da = DataApi()
 if __name__ == '__main__':
     da = DataApi()
-    weight = da._stock_bar('20180820', '20180820')
     weight = da.index_weight()
     sw_weight = da.sw_weight()
     stock_quote = da.stock_bar(weight['code'].unique())
     stock_basic = da.stock_bar(weight['code'].unique(), field='daily_basic')
     weight
-    # da.pro.daily(weight['code'])
-    # da.trading_day()
