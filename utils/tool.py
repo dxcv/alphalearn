@@ -1,6 +1,5 @@
 from utils.trading_calendar import *
-
-
+import pandas as pd
 
 
 def auto_sample(nav_series, nav_type=None):
@@ -29,3 +28,16 @@ def auto_sample(nav_series, nav_type=None):
     nav_series = nav_series.dropna()
     return nav_series
 
+
+def winsorize_series(se):
+    q = se.quantile([0.025, 0.975])
+    if isinstance(q, pd.Series) and len(q) == 2:
+        se[se < q.iloc[0]] = q.iloc[0]
+        se[se > q.iloc[1]] = q.iloc[1]
+    return se
+
+
+def standardize_series(se):
+    se_std = se.std()
+    se_mean = se.mean()
+    return (se - se_mean) / se_std
