@@ -10,27 +10,28 @@ from dataProvider.trading_calendar import *
 from utils.constants import *
 from utils.tool import *
 
-__ALL__ = [
-    'index_weight',
-    'sw_weight',
-    'daily',
-    'daily_basic'
-]
+__ALL__ = {
+    'index_weight': '指数成份',
+    'sw_weight': '申万成份',
+    'stock_bar': '股票日线',
+    'stock_basic': '股票基础指标',
+    'index_bar': '股票指数日线'
+}
 
 
 class DataApi(object):
     def __init__(self):
         ts.set_token('0503684c1ca87a31116049960065adbf985e0c052adb268a2b5397dd')
         self.pro = ts.pro_api()
+        self._ts_conn = ts.get_apis()
         self.today = datetime.datetime.now().strftime('%Y%m%d')
         self.stock_store = os.path.join(os.path.dirname(__file__), 'cache/stock_store.h5')
         log_name = os.path.join(os.path.dirname(__file__), "log_dir/analysis_%s.log" % self.today)
         get_logger(log_name)
 
-    def trading_day(self, start_date='', end_date=''):
-        res = self.pro.trade_cal(exchange_id='SSE', start_date=start_date, end_date=end_date, is_open='1')[
-            'cal_date'].tolist()
-        return res
+    # def trading_day(self):
+    #     res = self.pro.trade_cal(exchange_id='SSE', is_open='1')['cal_date'].tolist()
+    #     return res
 
     def delete_quote(self, dir=None):
         # 每日重新更新行情缓存
@@ -55,7 +56,7 @@ class DataApi(object):
         zz500['index_code'] = '399905.SZ'
         sz50['index_code'] = '000016.SH'
         # 汇总数据
-        res = pd.concat([hs300, zz500, sz50], ignore_index=True, sort=False)
+        res = pd.concat([hs300, zz500, sz50], ignore_index=True)
         #   标准化code
         res['code'] = [i + '.SH' if i[0] == '6' else i + '.SZ' for i in res['code']]
         res['update_time'] = self.today
@@ -74,6 +75,7 @@ class DataApi(object):
         if index_code is None:
             index_code = ['000300.SH', '399905.SZ', '000016.SH']
         res = data[data['index_code'].isin(index_code)]
+        del res['update_time']
         return res
 
     def _stock_bar(self, start_date=None, end_date=None, field='daily'):
@@ -123,6 +125,21 @@ class DataApi(object):
         res['update_time'] = self.today
         return res
 
+    def _index_bar(self):
+        #   获取所有指数行情
+        res = pd.DataFrame()
+        for index_code, index_name in STOCK_INDEX_CODE.items():
+            temp = ts.bar(index_code, conn=self._ts_conn, asset='INDEX')
+            temp['index_name'] = index_name
+            res = res.append(temp)
+        #   更正字段名
+        res.rename(columns={'code': 'index_code', 'p_change': 'pct_change'}, inplace=True)
+        res.index = res.index.strftime('%Y%m%d')
+        res.index.name = 'trade_date'
+        res['index_code'] = [i + '.SH' if i[0] == '6' else i + '.SZ' for i in res['index_code']]
+        res['update_time'] = self.today
+        return res
+
     def sw_weight(self):
         #   输入列表['000300.SH','399905.SZ','000016.SH']获取对应指数成分股
         try:
@@ -133,14 +150,43 @@ class DataApi(object):
         except Exception as e:
             data = self._sw_weight()
             data.to_hdf(self.stock_store, 'sw_weight', complevel=9)
+        del data['update_time']
         return data
+
+    def index_bar(self, index_code=None, start_date=None, end_date=None):
+        #   输入列表['000300.SH','399905.SZ','000016.SH']获取对应指数行情
+        lastTradingDay = get_pre_trading_day()
+        if start_date is None:
+            start_date = lastTradingDay
+        if end_date is None or end_date >= lastTradingDay:
+            end_date = lastTradingDay
+        try:
+            data = pd.read_hdf(self.stock_store, 'index_bar')
+            if data['update_time'].max() != self.today:
+                data = self._index_bar()
+                data.to_hdf(self.stock_store, 'index_bar', complevel=9)
+        except Exception as e:
+            data = self._index_bar()
+            data.to_hdf(self.stock_store, 'index_bar', complevel=9)
+        del data['update_time']
+        res = data.loc[(data['trade_date'] >= start_date) & (data['trade_date'] <= end_date)]
+        if index_code is None:
+            return res
+        else:
+            return res.loc[res['index_code'].isin(index_code)]
+
+    def stock_basic(self, code=None, start_date=None, end_date=None, field='daily_basic'):
+        res = self.stock_bar(code=code, start_date=start_date, end_date=end_date, field=field)
+        return res
 
 
 da = DataApi()
 if __name__ == '__main__':
     da = DataApi()
+    # TT = da.index_bar()
     weight = da.index_weight()
-    sw_weight = da.sw_weight()
-    stock_quote = da.stock_bar(weight['code'].unique())
-    stock_basic = da.stock_bar(weight['code'].unique(), field='daily_basic')
+    # sw_weight = da.sw_weight()
+    # stock_quote = da.stock_bar(weight['code'].unique())
+    stock_quote = da.stock_basic(code=weight['code'].unique())
+    # stock_basic = da.stock_bar(weight['code'].unique(), field='daily_basic')
     weight

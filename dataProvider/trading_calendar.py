@@ -1,13 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# @Time    : 2017/10/20 0020 11:32
-# @Author  : yukuai
-# @Site    : 
-# @File    : trading_day.py
-# @Software: PyCharm
 import datetime
 import tushare as ts
-from dataProvider.dataapi import da
+import pandas as pd
+import os
 
 __ALL__ = [
     'is_trading_day',
@@ -22,11 +18,27 @@ __ALL__ = [
 ]
 
 
+def trading_day():
+    stock_store = os.path.join(os.path.dirname(__file__), 'cache/stock_store.h5')
+    try:
+        data = pd.read_hdf(stock_store, 'trading_day')
+        if data.max() <= datetime.datetime.now().strftime('%Y%m%d'):
+            ts.set_token('0503684c1ca87a31116049960065adbf985e0c052adb268a2b5397dd')
+            data = ts.pro_api().trade_cal(exchange_id='SSE', is_open='1')['cal_date']
+            data.to_hdf(stock_store, 'trading_day', complevel=9)
+    except Exception as e:
+        ts.set_token('0503684c1ca87a31116049960065adbf985e0c052adb268a2b5397dd')
+        data = ts.pro_api().trade_cal(exchange_id='SSE', is_open='1')['cal_date']
+        data.to_hdf(stock_store, 'trading_day', complevel=9)
+    data = data.tolist()
+    return data
+
+
 def init_calendar():
     obj = init_calendar
     cache_name = 'trading_days'
     if not hasattr(obj, cache_name):
-        trading_days = da.trading_day()
+        trading_days = trading_day()
         setattr(obj, cache_name, trading_days)
     return getattr(obj, cache_name)
 
@@ -252,3 +264,5 @@ def get_trading_month_day_range(begin_date=None, end_date=None):
     e = trading_month_days.index(end_date)
     return trading_month_days[b:e + 1]
 
+
+trading_day()
