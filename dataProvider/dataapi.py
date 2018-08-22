@@ -138,6 +138,7 @@ class DataApi(object):
         res.index.name = 'trade_date'
         res['index_code'] = [i + '.SH' if i[0] == '6' else i + '.SZ' for i in res['index_code']]
         res['update_time'] = self.today
+        res = res.reset_index()
         return res
 
     def sw_weight(self):
@@ -183,10 +184,9 @@ class DataApi(object):
 da = DataApi()
 if __name__ == '__main__':
     da = DataApi()
-    # TT = da.index_bar()
+    TT = da.index_bar()
     weight = da.index_weight()
-    # sw_weight = da.sw_weight()
-    # stock_quote = da.stock_bar(weight['code'].unique())
-    stock_quote = da.stock_basic(code=weight['code'].unique())
-    # stock_basic = da.stock_bar(weight['code'].unique(), field='daily_basic')
+    sw_weight = da.sw_weight()
+    stock_quote = da.stock_bar(weight['code'].unique())
+    stock_basic = da.stock_basic(code=weight['code'].unique())
     weight
