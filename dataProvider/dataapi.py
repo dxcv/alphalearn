@@ -98,6 +98,7 @@ class DataApi(object):
             end_date = lastTradingDay
         try:
             data = pd.read_hdf(self.stock_store, field)
+            # data = data[data['trade_date'] < '20180821']
             if data['trade_date'].max() < end_date:
                 new_data = self._stock_bar(data['trade_date'].max(), lastTradingDay, field)
                 data = data.append(new_data, ignore_index=True)
@@ -184,6 +185,7 @@ class DataApi(object):
 da = DataApi()
 if __name__ == '__main__':
     da = DataApi()
+    # da._stock_bar('20180822', '20180822')
     TT = da.index_bar()
     weight = da.index_weight()
     sw_weight = da.sw_weight()
