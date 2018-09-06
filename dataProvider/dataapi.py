@@ -146,9 +146,9 @@ class DataApi(object):
         #   输入列表['000300.SH','399905.SZ','000016.SH']获取对应指数成分股
         try:
             data = pd.read_hdf(self.stock_store, 'sw_weight')
-            if data['update_time'].max() != self.today:
-                data = self._sw_weight()
-                data.to_hdf(self.stock_store, 'sw_weight', complevel=9)
+            # if data['update_time'].max() != self.today:
+            #     data = self._sw_weight()
+            #     data.to_hdf(self.stock_store, 'sw_weight', complevel=9)
         except Exception as e:
             data = self._sw_weight()
             data.to_hdf(self.stock_store, 'sw_weight', complevel=9)

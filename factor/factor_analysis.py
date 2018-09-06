@@ -26,8 +26,8 @@ from alphalens.utils import get_clean_factor_and_forward_returns
 #                              市值因子分析
 ######################################################################################
 #   基础数据
-start_date = '20170101'
-end_date = '20180101'
+start_date = '20180101'
+end_date = '20180905'
 index_weight = da.index_weight()
 sw_industry = da.sw_weight()
 code_list = index_weight['code'].unique()
@@ -40,13 +40,19 @@ stock_init = stock_bar.set_index(['trade_date', 'code'])
 stock_close = stock_init['close'].unstack()
 
 #   股票因子
-stock_basic['trade_date'] = pd.to_datetime(stock_basic['trade_date'])
+# stock_basic['trade_date'] = pd.to_datetime(stock_basic['trade_date'])
 # stock_factor = 1000 * stock_init['amount']
-stock_factor = 10000 * stock_basic.set_index(['trade_date', 'code'])['total_mv'].dropna()
-stock_factor = stock_factor.apply(lambda x: np.log(x))
-stock_factor = stock_factor.groupby('trade_date').apply(winsorize_series)
-stock_factor = stock_factor.groupby('trade_date').apply(standardize_series)
+stock_factor_1 = stock_close.pct_change(20).iloc[120:].unstack().reset_index().set_index(['trade_date', 'code'])
+stock_factor_2 = stock_close.pct_change(120).iloc[120:].unstack().reset_index().set_index(['trade_date', 'code']) * -1
+# stock_factor = 10000 * stock_basic.set_index(['trade_date', 'code'])['total_mv'].dropna()
+# stock_factor = stock_factor.apply(lambda x: np.log(x))
+stock_factor_1 = stock_factor_1.groupby('trade_date').apply(winsorize_series)
+stock_factor_1 = stock_factor_1.groupby('trade_date').apply(standardize_series)
+stock_factor_2 = stock_factor_2.groupby('trade_date').apply(winsorize_series)
+stock_factor_2 = stock_factor_2.groupby('trade_date').apply(standardize_series)
+stock_factor = stock_factor_1 + stock_factor_2
 stock_factor = stock_factor.astype(float)
+
 #   申万行业分类
 industry_dict = sw_industry.set_index('code')['index_code'].to_dict()
 industry_labels = sw_industry.set_index('index_code')['index_name'].to_dict()
@@ -61,7 +67,7 @@ factor_data = get_clean_factor_and_forward_returns(
     periods=(1, 5, 10),
     filter_zscore=None)
 
-create_full_tear_sheet(factor_data, long_short=False, group_neutral=True, by_group=True)
+create_full_tear_sheet(factor_data, long_short=False, group_neutral=False, by_group=True)
 # create_summary_tear_sheet(factor_data, long_short=True, group_neutral=True)
 # create_event_returns_tear_sheet(factor_data, stock_close, avgretplot=(3, 11),
 #                                 long_short=False, group_neutral=True, by_group=True)
