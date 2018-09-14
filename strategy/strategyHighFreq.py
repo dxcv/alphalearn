@@ -1,8 +1,6 @@
 # encoding: UTF-8
 
 """
-
-
 策略逻辑：
 入场： 每两秒读一次，分析过去N1个tick的的总计，如果买量大于卖量K倍，且lastprice向上（最后一个值的lastprice大于或等于10个中的N2个tick的lastprice）
 空单反之
@@ -40,31 +38,34 @@ class TickOneStrategy(CtaTemplate):
 
     # 策略变量
     posPrice = 0  # 持仓价格
-    pos = 0       # 持仓数量
-
+    pos = 0  # 持仓数量
 
     # 参数列表，保存了参数的名称
-    paramList = ['name',
-                 'className',
-                 'author',
-                 'vtSymbol',
-                 'initDays',
-                 'Ticksize',
-                 'fixedSize'
-                 ]
+    paramList = [
+        'name',
+        'className',
+        'author',
+        'vtSymbol',
+        'initDays',
+        'Ticksize',
+        'fixedSize'
+    ]
 
     # 变量列表，保存了变量的名称
-    varList = ['inited',
-               'trading',
-               'pos',
-               'posPrice'
-               ]
+    varList = [
+        'inited',
+        'trading',
+        'pos',
+        'posPrice'
+    ]
 
     # 同步列表，保存了需要保存到数据库的变量名称
-    syncList = ['pos',
-                'posPrice',
-                'intraTradeHigh',
-                'intraTradeLow']
+    syncList = [
+        'pos',
+        'posPrice'
+        # 'intraTradeHigh',
+        # 'intraTradeLow'
+    ]
 
     # ----------------------------------------------------------------------
     def __init__(self, ctaEngine, setting):
@@ -72,7 +73,7 @@ class TickOneStrategy(CtaTemplate):
 
         super(TickOneStrategy, self).__init__(ctaEngine, setting)
 
-        #创建Array队列
+        # 创建Array队列
         self.tickArray = TickArrayManager(self.Ticksize)
 
     # ----------------------------------------------------------------------
@@ -84,9 +85,7 @@ class TickOneStrategy(CtaTemplate):
     def onInit(self):
         """初始化策略（必须由用户继承实现）"""
         self.writeCtaLog(u'%s策略初始化' % self.name)
-        #tick级别交易，不需要过往历史数据
-
-
+        # tick级别交易，不需要过往历史数据
         self.putEvent()
 
     # ----------------------------------------------------------------------
@@ -106,8 +105,8 @@ class TickOneStrategy(CtaTemplate):
         """收到行情TICK推送（必须由用户继承实现）"""
         currentTime = datetime.now().time()
         # 平当日仓位, 如果当前时间是结束前日盘15点28分钟,或者夜盘10点58分钟，如果有持仓，平仓。
-        if ((currentTime >= self.DAY_START and currentTime <= self.DAY_END) or
-            (currentTime >= self.NIGHT_START and currentTime <= self.NIGHT_END)):
+        if (self.DAY_START <= currentTime <= self.DAY_END or
+                self.NIGHT_START <= currentTime <= self.NIGHT_END):
             TA = self.tickArray
             TA.updateTick(tick)
             if not TA.inited:
@@ -116,14 +115,14 @@ class TickOneStrategy(CtaTemplate):
                 # 如果空仓，分析过去10个对比，ask卖方多下空单，bid买方多下多单，并防止两个差价阻止单
                 if TA.askBidVolumeDif() > 0:
                     self.short(tick.lastPrice, self.fixedSize, False)
-                    self.cover(tick.lastPrice + 2,self.fixedSize, True)
+                    self.cover(tick.lastPrice + 2, self.fixedSize, True)
                 elif TA.askBidVolumeDif() < 0:
                     self.buy(tick.lastPrice, self.fixedSize, False)
                     self.sell(tick.lastPrice - 2, self.fixedSize, True)
 
             elif self.pos > 0:
                 # 如果持有多单，如果已经是买入价格正向N3个点，再次判断趋势，如果已经不符合，市价卖出。如果持有，清掉之前阻止单，改挂当前价位反向2个点阻止单。
-                if  tick.lastprice - self.posPrice >= 3:
+                if tick.lastprice - self.posPrice >= 3:
                     if TA.askBidVolumeDif() < 0:
                         self.cancelAll()
                         self.sell(tick.lastPrice - 2, self.fixedSize, True)
@@ -133,7 +132,7 @@ class TickOneStrategy(CtaTemplate):
 
             elif self.pos < 0:
                 # 如果持有空单，如果已经是买入价格反向N3个点，再次判断趋势，如果已经不符合，市价卖出。如果持有，清掉之前阻止单，改挂当前价位反向2个点阻止单。
-                if  tick.lastPrice - self.posPrice <= -3:
+                if tick.lastPrice - self.posPrice <= -3:
                     if TA.askBidVolumeDif() > 0:
                         self.cancelAll()
                         self.cover(tick.lastPrice + 2, self.fixedSize, True)
@@ -142,26 +141,19 @@ class TickOneStrategy(CtaTemplate):
                         self.cover(tick.lastPrice, self.fixedSize, False)
         else:
             if self.pos > 0:
-                self.sell(tick.close, abs(self.pos),False)
+                self.sell(tick.lastPrice, abs(self.pos), False)
             elif self.pos < 0:
-                self.cover(tick.close, abs(self.pos),False)
+                self.cover(tick.lastPrice, abs(self.pos), False)
             elif self.pos == 0:
                 return
-
-
-
-
 
     # ----------------------------------------------------------------------
     def onBar(self, bar):
         """收到Bar推送（必须由用户继承实现）"""
 
-
     # ----------------------------------------------------------------------
     def onXminBar(self, bar):
         """收到X分钟K线"""
-
-
 
     # ----------------------------------------------------------------------
     def onOrder(self, order):
